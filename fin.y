@@ -31,7 +31,7 @@
     } V;
 
     N *CreateNode(enum headTypes NodeType, int V, char *Name);
-    N *CopyTree(N *tree);  // 新增: 複製樹
+    N *CopyTree(N *tree);
     void bind_parameters(N *tree);
     int EvalueTree(N *tree);
     void put_parameters(N *tree);
@@ -270,9 +270,9 @@
 
     FUN_EXP 
         : '(' FUN { fun_position = 0; } FUN_IDs FUN_BODY ')' {
-            bind_parameters($5); // <--- 將變數綁定為參數索引
+            bind_parameters($5); // 將變數綁定為參數索引
             $$ = $5;
-            fun_table.clear();   // <--- 定義完就清空，不要留到 Call
+            fun_table.clear();   // 定義完就清空，不要留到 Call
             fun_position = 0;
         }
 
@@ -366,7 +366,6 @@
         return NewNode;
     }
 
-    // 新增: 複製樹的函數
     N* CopyTree(N* tree) {
         if(tree == NULL) return NULL;
         
@@ -374,7 +373,6 @@
         newNode->type = tree->type;
         newNode->val = tree->val;
         
-        // 複製字串
         if(tree->name != NULL && strlen(tree->name) > 0) {
             newNode->name = (char*)malloc(strlen(tree->name) + 1);
             strcpy(newNode->name, tree->name);
@@ -391,7 +389,6 @@
     int EvalueTree(N* tree) {
         if(tree == NULL) return 0;
         
-        // 處理運算符
         if(tree->type >= 0 && tree->type <= 10) {
             int left = 0, right = 0;
             left = EvalueTree(tree->l);

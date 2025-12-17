@@ -1769,7 +1769,7 @@ yyreduce:
 
   case 58:
 #line 283 "fin.y" /* yacc.c:1646  */
-    { // <--- 插入動作：開始解析參數前歸零
+    {
         }
 #line 1775 "fin.tab.c" /* yacc.c:1646  */
     break;
