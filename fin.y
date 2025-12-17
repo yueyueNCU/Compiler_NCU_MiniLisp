@@ -12,7 +12,8 @@
     enum headTypes {
         plu_op, sub_op, mut_op, div_op, mod_op,
         and_op, or_op, not_op, equ_op, gre_op, sma_op, num_no, 
-        var_no, nothing
+        var_no, param_no, nothing,
+        fun_call_op
     };
 
     typedef struct node{
@@ -31,6 +32,7 @@
 
     N *CreateNode(enum headTypes NodeType, int V, char *Name);
     N *CopyTree(N *tree);  // 新增: 複製樹
+    void bind_parameters(N *tree);
     int EvalueTree(N *tree);
     void put_parameters(N *tree);
 
@@ -267,16 +269,18 @@
     ELSE_EXP : exp { $$ = $1; }
 
     FUN_EXP 
-        : '(' FUN FUN_IDs FUN_BODY ')' {
-            $$ = $4;
+        : '(' FUN { fun_position = 0; } FUN_IDs FUN_BODY ')' {
+            bind_parameters($5); // <--- 將變數綁定為參數索引
+            $$ = $5;
+            fun_table.clear();   // <--- 定義完就清空，不要留到 Call
+            fun_position = 0;
         }
 
     FUN_IDs 
         : '(' ')' {
             fun_position = 0;
         }
-        | '(' exps_fun ')' {
-            // fun_position 已在 exps_fun 中累加
+        | '(' { fun_position = 0; } exps_fun ')' {
         }
 
     exps_fun
@@ -297,16 +301,12 @@
     FUN_CALL
         : '(' FUN_EXP ')' {
             $$ = $2;
-            fun_table.clear();
-            fun_position = 0;
         }
         | '(' FUN_EXP PARAMS ')' {
             N* fun_body_copy = CopyTree($2);
             put_parameters(fun_body_copy);
             $$ = fun_body_copy;
-            fun_table.clear();
             pa_position = 0;
-            fun_position = 0;
         }
         | '(' FUN_NAME PARAMS ')' {
             string fname($2->name);
@@ -442,18 +442,31 @@
         return 0;
     }
 
+    void bind_parameters(N *tree) {
+        if (tree == NULL) return;
+        
+        // 如果是變數，檢查它是否為參數
+        if (tree->type == var_no) {
+            string name(tree->name);
+            if (fun_table.find(name) != fun_table.end()) {
+                // 找到對應，將節點類型改為參數引用
+                tree->type = param_no;
+                tree->val = fun_table[name].val; // 直接存入它是第幾個參數(index)
+            }
+        }
+        
+        bind_parameters(tree->l);
+        bind_parameters(tree->r);
+    }
+
     void put_parameters(N *tree) {
         if(tree == NULL) return;
         
-        if(tree->type == var_no) {
-            string var_name(tree->name);
-            // 檢查是否為函數參數
-            if(fun_table.find(var_name) != fun_table.end()) {
-                int param_pos = fun_table[var_name].val;
-                // 將變數節點改為數字節點
-                tree->type = num_no;
-                tree->val = para[param_pos];
-            }
+        // 如果是參數引用節點
+        if(tree->type == param_no) {
+            // 把它變成數字節點，數值取自參數堆疊
+            tree->type = num_no;
+            tree->val = para[tree->val]; // tree->val 已經存了 index
         }
         
         put_parameters(tree->l);
